@@ -51,20 +51,37 @@ jobs:
           echo "Building in: $DIR"
           echo "PROJECT_DIR=$DIR" >> "$GITHUB_ENV"
 
+      - name: Ensure Gradle wrapper jar
+        run: |
+          cd "$PROJECT_DIR"
+          if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
+            echo "Wrapper jar missing - downloading for Gradle 8.11.1"
+            mkdir -p gradle/wrapper
+            curl -fsSL -o gradle/wrapper/gradle-wrapper.jar \
+              https://raw.githubusercontent.com/gradle/gradle/v8.11.1/gradle/wrapper/gradle-wrapper.jar || true
+          fi
+
       - name: Build debug APK
         run: |
           cd "$PROJECT_DIR"
           chmod +x ./gradlew
           rm -f ./local.properties
-          ./gradlew assembleDebug --stacktrace
+          if [ -f gradle/wrapper/gradle-wrapper.jar ]; then
+            ./gradlew assembleDebug --stacktrace
+          else
+            gradle assembleDebug --stacktrace
+          fi
 
       - name: Build release APK
         continue-on-error: true
         run: |
           cd "$PROJECT_DIR"
-          chmod +x ./gradlew
           rm -f ./local.properties
-          ./gradlew assembleRelease --stacktrace
+          if [ -f gradle/wrapper/gradle-wrapper.jar ]; then
+            ./gradlew assembleRelease --stacktrace
+          else
+            gradle assembleRelease --stacktrace
+          fi
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
